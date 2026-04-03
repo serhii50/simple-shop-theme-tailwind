@@ -1,0 +1,12 @@
+{
+  "name": "simple-shop-theme-tailwind",
+  "version": "1.0.0",
+  "description": "Tailwind CSS theme for Simple Shop",
+  "main": "tailwind.config.js",
+  "scripts": {
+    "build": "npx tailwindcss@3 -i ./assets/css/input.css -o ./assets/css/style.css --minify"
+  },
+  "dependencies": {
+    "tailwindcss": "^3.4.17"
+  }
+}
