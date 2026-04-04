@@ -2,7 +2,21 @@
 layout: default
 ---
 
-<div x-data="{ view: 'grid' }" class="min-h-screen bg-gray-50 pb-10">
+{% comment %} Собираем список уникальных тегов из всех товаров {% endcomment %}
+{% assign all_tags = "" %}
+{% for item in site.data.products %}
+  {% if item.tags != "" and item.tags != nil %}
+    {% assign item_tags = item.tags | split: ";" %}
+    {% for tag in item_tags %}
+      {% unless all_tags contains tag %}
+        {% assign all_tags = all_tags | append: tag | append: "," %}
+      {% endunless %}
+    {% endfor %}
+  {% endif %}
+{% endfor %}
+{% assign unique_tags = all_tags | split: "," | uniq %}
+
+<div class="min-h-screen bg-gray-50 pb-10">
 
   <div class="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-20">
     <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
@@ -13,77 +27,158 @@ layout: default
 
       <div class="flex bg-gray-100 p-1 rounded-lg">
         <button 
-          @click="view = 'grid'" 
-          class="p-1.5 rounded-md transition-all"
-          :class="view === 'grid' ? 'bg-white shadow text-blue-600' : 'text-gray-400 hover:text-gray-600'"
+          onclick="setView('grid')"
+          id="btn-view-grid"
+          class="p-1.5 rounded-md transition-all bg-white shadow text-blue-600"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
         </button>
 
         <button 
-          @click="view = 'list'"
-          class="p-1.5 rounded-md transition-all"
-          :class="view === 'list' ? 'bg-white shadow text-blue-600' : 'text-gray-400 hover:text-gray-600'"
+          onclick="setView('list')"
+          id="btn-view-list"
+          class="p-1.5 rounded-md transition-all text-gray-400 hover:text-gray-600"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
         </button>
       </div>
 
     </div>
+
+    {% comment %} Панель фильтров по тегам {% endcomment %}
+    {% if unique_tags.size > 0 %}
+    <div class="max-w-7xl mx-auto px-4 pb-3 flex flex-wrap gap-2">
+      <button
+        id="tag-all"
+        onclick="filterByTag(null, this)"
+        class="tag-filter text-xs font-semibold px-3 py-1 rounded-full transition-all bg-gray-900 text-white"
+      >
+        Все
+      </button>
+      {% for tag in unique_tags %}
+        {% if tag != "" %}
+        <button
+          id="tag-{{ tag }}"
+          onclick="filterByTag('{{ tag }}', this)"
+          class="tag-filter text-xs font-semibold px-3 py-1 rounded-full transition-all bg-gray-100 text-gray-600 hover:bg-gray-200"
+        >
+          {{ tag }}
+        </button>
+        {% endif %}
+      {% endfor %}
+    </div>
+    {% endif %}
   </div>
 
   <div class="max-w-7xl mx-auto px-4 py-6">
     
-    <div :class="view === 'grid' ? 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-6' : 'flex flex-col gap-3'">
+    <div id="product-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-6">
 
       {% for item in site.data.products limit:100 %}
         {% assign images = item.images | split: ';' %}
         {% assign main_image = images[0] %}
+        {% assign item_tags = item.tags | split: ';' %}
 
-        <a href="{{ '/product/' | relative_url }}{{ item.id }}.html" class="block group">
-          
+        <div 
+          class="product-card group"
+          data-tags="{{ item.tags }}"
+        >
           <div 
-            class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-shadow hover:shadow-md"
-            :class="view === 'grid' ? 'flex flex-col h-full' : 'flex items-center p-3 gap-4'"
+            class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-shadow hover:shadow-md flex flex-col h-full relative"
           >
-            
-            <div 
-              class="bg-gray-100 relative overflow-hidden flex-shrink-0"
-              :class="view === 'grid' ? 'aspect-square w-full' : 'w-20 h-20 rounded-lg'"
-            >
-              <img src="{{ main_image }}" alt="{{ item.name }}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">
-            </div>
 
-            <div class="flex flex-col flex-grow" :class="view === 'grid' ? 'p-3' : ''">
-              
-              <span 
-                x-show="view === 'grid'" 
-                class="text-[10px] uppercase font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded w-fit mb-1"
-              >
-                New
-              </span>
+            <a href="{{ '/product/' | relative_url }}{{ item.id }}.html" class="block">
+              <div class="bg-gray-100 relative overflow-hidden aspect-square w-full">
+                <img src="{{ main_image }}" alt="{{ item.name }}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">
+              </div>
+            </a>
 
-              <h3 class="font-bold text-gray-800 text-sm leading-snug line-clamp-2 mb-1">
-                {{ item.name }}
-              </h3>
+            <div class="flex flex-col flex-grow p-3">
 
-              <div class="mt-auto pt-2 flex items-center justify-between">
+              {% if item_tags.size > 0 and item.tags != "" %}
+              <div class="flex flex-wrap gap-1 mb-2">
+                {% for tag in item_tags %}
+                  {% if tag != "" %}
+                  <span class="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">#{{ tag }}</span>
+                  {% endif %}
+                {% endfor %}
+              </div>
+              {% endif %}
+
+              <a href="{{ '/product/' | relative_url }}{{ item.id }}.html" class="block">
+                <h3 class="font-bold text-gray-800 text-sm leading-snug line-clamp-2 mb-1">
+                  {{ item.name }}
+                </h3>
+              </a>
+
+              <div class="mt-auto pt-2 flex items-center justify-between gap-2">
                 <span class="text-lg font-bold text-gray-900">
                   {{ item.price }} {{ site.currency }}
                 </span>
                 
-                <div class="bg-gray-900 text-white p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" :class="view === 'list' ? '!opacity-100' : ''">
+                <button
+                  onclick="addToCartFromList('{{ item.name | escape }}', '{{ item.price }}', '{{ main_image }}')"
+                  class="bg-gray-900 hover:bg-blue-600 text-white p-2 rounded-lg transition-all active:scale-95 flex-shrink-0"
+                  title="В корзину"
+                >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
-                </div>
+                </button>
               </div>
 
             </div>
 
           </div>
-        </a>
+        </div>
       {% endfor %}
 
     </div>
   </div>
 
 </div>
+
+<script>
+  // Переключение вида (grid/list)
+  var currentView = 'grid';
+  function setView(view) {
+    currentView = view;
+    var grid = document.getElementById('product-grid');
+    var btnGrid = document.getElementById('btn-view-grid');
+    var btnList = document.getElementById('btn-view-list');
+    if (view === 'grid') {
+      grid.className = 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-6';
+      btnGrid.className = 'p-1.5 rounded-md transition-all bg-white shadow text-blue-600';
+      btnList.className = 'p-1.5 rounded-md transition-all text-gray-400 hover:text-gray-600';
+    } else {
+      grid.className = 'flex flex-col gap-3';
+      btnList.className = 'p-1.5 rounded-md transition-all bg-white shadow text-blue-600';
+      btnGrid.className = 'p-1.5 rounded-md transition-all text-gray-400 hover:text-gray-600';
+    }
+  }
+
+  // Фильтрация по тегу
+  function filterByTag(tag, btn) {
+    // Сброс стилей кнопок
+    document.querySelectorAll('.tag-filter').forEach(function(b) {
+      b.className = 'tag-filter text-xs font-semibold px-3 py-1 rounded-full transition-all bg-gray-100 text-gray-600 hover:bg-gray-200';
+    });
+    btn.className = 'tag-filter text-xs font-semibold px-3 py-1 rounded-full transition-all bg-gray-900 text-white';
+
+    // Показываем/скрываем карточки
+    document.querySelectorAll('.product-card').forEach(function(card) {
+      if (!tag) {
+        card.style.display = '';
+      } else {
+        var tags = card.getAttribute('data-tags') || '';
+        card.style.display = tags.split(';').indexOf(tag) !== -1 ? '' : 'none';
+      }
+    });
+  }
+
+  // Добавление в корзину из списка (без перехода на страницу товара)
+  function addToCartFromList(title, price, image) {
+    var cart = JSON.parse(localStorage.getItem('mySimpleCart')) || [];
+    cart.push({ title: title, price: price, image: image });
+    localStorage.setItem('mySimpleCart', JSON.stringify(cart));
+    if (window.updateBadge) window.updateBadge();
+  }
+</script>
